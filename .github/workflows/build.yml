@@ -1,32 +1,28 @@
-name: 雲端打包 Windows 程式
+name: 雲端打包與部署
 
 on:
-  workflow_dispatch: # 允許我們在 GitHub 網頁上手動點擊執行
+  workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: windows-latest # 借用微軟的 Windows 伺服器
-
+  build-and-deploy:
+    runs-on: windows-latest
+    permissions:
+      contents: write # 讓機器人有權限上傳檔案
     steps:
-      - name: 取得程式碼
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: 安裝 Node.js 環境
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      - name: 安裝套件與編譯
+        run: |
+          npm install
+          npm run build # 這會產生 dist 資料夾
 
-      - name: 安裝專案套件
-        run: npm install
-
-      - name: 執行打包指令
+      - name: 打包 Windows 安裝檔
         run: npm run dist:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 提取做好的 EXE 檔案
-        uses: actions/upload-artifact@v4
+      - name: 部署網頁版到 GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          name: Maple-Split-Calculator-EXE
-          path: release/*.exe
-          retention-days: 1 # 檔案只保留一天，保持專案乾淨
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist # 將編譯好的網頁放到網頁伺服器
