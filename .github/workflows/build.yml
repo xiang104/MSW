@@ -1,0 +1,30 @@
+name: 雲端打包 Windows 程式
+
+on:
+  workflow_dispatch: # 允許我們在 GitHub 網頁上手動點擊執行
+
+jobs:
+  build:
+    runs-on: windows-latest # 借用微軟的 Windows 伺服器
+
+    steps:
+      - name: 取得程式碼
+        uses: actions/checkout@v4
+
+      - name: 安裝 Node.js 環境
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安裝專案套件
+        run: npm install
+
+      - name: 執行打包指令
+        run: npm run dist:win
+
+      - name: 提取做好的 EXE 檔案
+        uses: actions/upload-artifact@v4
+        with:
+          name: Maple-Split-Calculator-EXE
+          path: release/*.exe
+          retention-days: 1 # 檔案只保留一天，保持專案乾淨
