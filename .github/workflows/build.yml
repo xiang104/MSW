@@ -21,6 +21,8 @@ jobs:
 
       - name: 執行打包指令
         run: npm run dist:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 提取做好的 EXE 檔案
         uses: actions/upload-artifact@v4
