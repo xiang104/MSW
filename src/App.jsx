@@ -1,7 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import PlayerCard from './components/PlayerCard';
 import TeamSummary from './components/TeamSummary';
 import SettlementList from './components/SettlementList';
+import ModeSwitcher from './components/ModeSwitcher';
+import RoomPanel from './components/RoomPanel';
+import { getSavedRoomCode, useRoomSync } from './hooks/useRoomSync';
 import {
   MIN_PLAYERS,
   MAX_PLAYERS,
@@ -13,10 +16,16 @@ import {
 } from './utils/calculator';
 
 export default function App() {
+  const [currentMode, setCurrentMode] = useState('local');
+  const [roomCode, setRoomCode] = useState(null);
+  const [roomError, setRoomError] = useState('');
   const [playerCount, setPlayerCount] = useState(4);
   const [players, setPlayers] = useState(() => createPlayers(4));
   const [lostItemMode, setLostItemMode] = useState(LOST_ITEM_MODE.SHARED);
   const [isTaxEnabled, setIsTaxEnabled] = useState(false);
+
+  const isRoomMode = currentMode === 'room';
+  const isInRoom = isRoomMode && Boolean(roomCode);
 
   const settlement = useMemo(
     () => calculateSettlement(players, { lostItemMode, isTaxEnabled }),
@@ -24,6 +33,69 @@ export default function App() {
   );
 
   const isSelfAbsorbMode = lostItemMode === LOST_ITEM_MODE.SELF_ABSORB;
+
+  const roomState = useMemo(
+    () => ({
+      playerCount,
+      players,
+      isTaxEnabled,
+      lostItemMode,
+    }),
+    [playerCount, players, isTaxEnabled, lostItemMode]
+  );
+
+  const applyRemoteState = useCallback((remote) => {
+    setPlayerCount(remote.playerCount);
+    setPlayers(remote.players);
+    setIsTaxEnabled(remote.isTaxEnabled);
+    setLostItemMode(remote.lostItemMode);
+    setRoomError('');
+  }, []);
+
+  const handleRoomCodeChange = useCallback((nextRoomCode) => {
+    setRoomCode(nextRoomCode);
+    if (nextRoomCode) {
+      setRoomError('');
+    }
+  }, []);
+
+  const { createRoom, joinRoom, leaveRoom, isFirebaseConfigured } = useRoomSync({
+    enabled: isInRoom,
+    roomCode,
+    roomState,
+    onRoomCodeChange: handleRoomCodeChange,
+    onRemoteUpdate: applyRemoteState,
+    onError: setRoomError,
+  });
+
+  useEffect(() => {
+    if (currentMode !== 'room' || roomCode) return undefined;
+
+    const savedCode = getSavedRoomCode();
+    if (!savedCode) return undefined;
+
+    let cancelled = false;
+    joinRoom(savedCode).catch((error) => {
+      if (!cancelled) {
+        setRoomError(error.message || '無法重新加入房間');
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentMode, roomCode, joinRoom]);
+
+  function handleModeChange(mode) {
+    if (mode === currentMode) return;
+
+    if (mode === 'local') {
+      leaveRoom();
+      setRoomError('');
+    }
+
+    setCurrentMode(mode);
+  }
 
   function handlePlayerCountChange(count) {
     const nextCount = Math.min(MAX_PLAYERS, Math.max(MIN_PLAYERS, count));
@@ -61,13 +133,45 @@ export default function App() {
     );
   }
 
+  async function handleCreateRoom() {
+    setRoomError('');
+    await createRoom();
+  }
+
+  async function handleJoinRoom(code) {
+    setRoomError('');
+    await joinRoom(code);
+  }
+
+  function handleLeaveRoom() {
+    leaveRoom();
+    setRoomError('');
+  }
+
   return (
     <div className="app">
+      <ModeSwitcher currentMode={currentMode} onChange={handleModeChange} />
+
+      {isRoomMode && (
+        <RoomPanel
+          roomCode={roomCode}
+          roomError={roomError}
+          isFirebaseConfigured={isFirebaseConfigured}
+          onCreateRoom={handleCreateRoom}
+          onJoinRoom={handleJoinRoom}
+          onLeaveRoom={handleLeaveRoom}
+        />
+      )}
+
       <header className="app-header">
         <div className="app-header__brand">
           <span className="app-header__badge">MAPLE SPLIT</span>
           <h1>楓星分寶計算機</h1>
-          <p>拍賣場結算 · 白金剪刀代墊 · 多退少補自動計算</p>
+          <p>
+            {isInRoom
+              ? '多人房間模式 · 資料即時同步至雲端'
+              : '拍賣場結算 · 白金剪刀代墊 · 多退少補自動計算'}
+          </p>
         </div>
 
         <div className="global-settings">
@@ -159,6 +263,7 @@ export default function App() {
 
       <section className="info-banner">
         <span>{isTaxEnabled ? '拍賣場手續費 3%（已啟用）' : '拍賣場手續費未啟用，以原價結算'}</span>
+        {isInRoom && <span>房間 {roomCode} · 變更將即時同步</span>}
         <span>剪刀成本 = (1,000 萬 ÷ 里程匯率) × 7,900</span>
         <span>虛擬持有 = 拍賣收入 + 搞丟道具賠償</span>
         <span>最終目標 = 基本分紅 + 個人代墊成本</span>

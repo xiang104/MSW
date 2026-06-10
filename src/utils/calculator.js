@@ -17,7 +17,7 @@ export const LOST_ITEM_MODE_OPTIONS = [
 
 export function createDefaultPlayer(index) {
   return {
-    id: `player-${index}-${Date.now()}`,
+    id: `player-${index}`,
     name: `玩家 ${index}`,
     auctionTotal: '',
     scissorsCount: 0,
