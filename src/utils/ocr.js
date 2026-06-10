@@ -2,17 +2,31 @@ import Tesseract from 'tesseract.js';
 import { formatMesos } from './calculator';
 
 const MIN_AMOUNT = 1_000_000;
-const OCR_WHITELIST = '0123456789,';
+const OCR_WHITELIST = '0123456789,. ';
+const PRICE_PATTERN = /\d{1,3}(?:[.,\s]\d{3})+\b/g;
 
-export function extractLargeAmounts(text) {
-  if (!text) return [];
+export function parseOcrPrices(text) {
+  console.log('OCR 原始辨識文字: ', text);
 
-  const matches = String(text).match(/\d[\d,]*/g) || [];
+  if (!text) return null;
+
+  const matches = text.match(PRICE_PATTERN);
+  if (!matches) return null;
+
   const amounts = matches
-    .map((token) => Number(token.replace(/,/g, '')))
-    .filter((value) => Number.isFinite(value) && value > MIN_AMOUNT);
+    .map((token) => Number(token.replace(/[.,\s]/g, '')))
+    .filter((value) => Number.isFinite(value) && value >= MIN_AMOUNT);
 
-  return [...new Set(amounts)].sort((a, b) => b - a);
+  if (amounts.length === 0) return null;
+
+  const expression = amounts.map(String).join('+');
+  const total = amounts.reduce((sum, num) => sum + num, 0);
+
+  return {
+    amounts,
+    expression,
+    total,
+  };
 }
 
 export async function recognizeMesosFromImage(file, onProgress) {
@@ -30,19 +44,20 @@ export async function recognizeMesosFromImage(file, onProgress) {
     });
 
     const { data } = await worker.recognize(file);
-    const amounts = extractLargeAmounts(data.text);
+    const parsed = parseOcrPrices(data.text);
 
     return {
       text: data.text,
-      amounts,
-      primaryAmount: amounts[0] ?? null,
+      amounts: parsed?.amounts ?? [],
+      expression: parsed?.expression ?? null,
+      total: parsed?.total ?? null,
     };
   } finally {
     await worker.terminate();
   }
 }
 
-export function confirmRecognizedAmount(amount) {
-  if (!amount) return false;
-  return window.confirm(`辨識出金額 ${formatMesos(amount)}，是否加入計算？`);
+export function confirmRecognizedTotal(total) {
+  if (!total) return false;
+  return window.confirm(`辨識出多筆金額總和：${formatMesos(total)}，是否帶入計算？`);
 }

@@ -886,9 +886,34 @@ body {
 
 .screenshot-upload {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px dashed transparent;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.screenshot-upload:focus {
+  border-color: rgba(77, 159, 255, 0.35);
+  background: rgba(77, 159, 255, 0.05);
+}
+
+.screenshot-upload__actions {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+}
+
+.screenshot-upload__hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
 }
 
 .screenshot-upload__input {

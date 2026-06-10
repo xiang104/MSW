@@ -8,3 +8,13 @@ export function appendToSellPrice(currentValue, amount) {
 
   return `${current}+${amountText}`;
 }
+
+export function appendExpressionToSellPrice(currentValue, expression) {
+  const nextExpression = String(expression ?? '').trim();
+  const current = String(currentValue ?? '').trim();
+
+  if (!nextExpression) return current;
+  if (!current || current === '0') return nextExpression;
+
+  return `${current}+${nextExpression}`;
+}

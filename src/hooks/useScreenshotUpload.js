@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { compressScreenshot } from '../utils/imageCompression';
-import { confirmRecognizedAmount, recognizeMesosFromImage } from '../utils/ocr';
-import { appendToSellPrice } from '../utils/sellPrice';
+import { confirmRecognizedTotal, recognizeMesosFromImage } from '../utils/ocr';
+import { appendExpressionToSellPrice } from '../utils/sellPrice';
 import { uploadRoomScreenshot } from '../utils/storageUpload';
 
 export function useScreenshotUpload({ roomCode, onPlayerUpdate }) {
@@ -20,9 +20,13 @@ export function useScreenshotUpload({ roomCode, onPlayerUpdate }) {
         const ocrResult = await recognizeMesosFromImage(compressedFile, setProgress);
 
         let sellPriceUpdater = null;
-        if (ocrResult.primaryAmount && confirmRecognizedAmount(ocrResult.primaryAmount)) {
+        if (
+          ocrResult.expression &&
+          ocrResult.total &&
+          confirmRecognizedTotal(ocrResult.total)
+        ) {
           sellPriceUpdater = (currentSellPrice) =>
-            appendToSellPrice(currentSellPrice, ocrResult.primaryAmount);
+            appendExpressionToSellPrice(currentSellPrice, ocrResult.expression);
         }
 
         let screenshotUrl = null;
