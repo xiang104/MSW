@@ -8,7 +8,9 @@ export default function TeamSummary({ summary }) {
       <h2>團隊結算摘要</h2>
       <div className="team-summary__grid">
         <div className="stat-card">
-          <span className="stat-card__label">拍賣收入總計 (扣 3%)</span>
+          <span className="stat-card__label">
+            {summary.isTaxEnabled ? '拍賣收入總計 (扣 3%)' : '拍賣收入總計'}
+          </span>
           <strong className="stat-card__value">
             {formatMesos(summary.totalActualAuctionIncome)}
           </strong>

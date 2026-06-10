@@ -1,4 +1,8 @@
-import { formatMesos, LOST_ITEM_MODE } from '../utils/calculator';
+import {
+  formatMesos,
+  calculateTotal,
+  LOST_ITEM_MODE,
+} from '../utils/calculator';
 
 function NumberField({ label, hint, value, onChange, min = 0 }) {
   return (
@@ -16,8 +20,39 @@ function NumberField({ label, hint, value, onChange, min = 0 }) {
   );
 }
 
-export default function PlayerCard({ index, player, result, lostItemMode, onChange }) {
+function AuctionTotalField({ inputId, value, isTaxEnabled, onChange }) {
+  const parsedTotal = calculateTotal(value);
+
+  return (
+    <div className="field auction-total-field">
+      <label className="field__label" htmlFor={inputId}>
+        拍賣場總賣價 (楓幣)
+      </label>
+      <span className="field__hint">支援加總算式，例如 5000+12000+3000</span>
+      <input
+        id={inputId}
+        className="field__input field__input--expression"
+        type="text"
+        inputMode="text"
+        value={value}
+        placeholder="0 或 5000+12000"
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <div className="auction-total-confirm">
+        <p className="auction-total-confirm__main">
+          💰 本次寶物總額為：<strong>{formatMesos(parsedTotal)}</strong> 楓幣
+        </p>
+        {isTaxEnabled && (
+          <p className="auction-total-confirm__tax">(結算將自動扣除 3% 手續費)</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function PlayerCard({ index, player, result, lostItemMode, isTaxEnabled, onChange }) {
   const isSelfAbsorbMode = lostItemMode === LOST_ITEM_MODE.SELF_ABSORB;
+
   return (
     <article className="player-card">
       <header className="player-card__header">
@@ -32,9 +67,10 @@ export default function PlayerCard({ index, player, result, lostItemMode, onChan
       </header>
 
       <div className="player-card__fields">
-        <NumberField
-          label="拍賣場總賣價 (楓幣)"
-          value={player.auctionTotal}
+        <AuctionTotalField
+          inputId={`auction-total-${player.id}`}
+          value={player.auctionTotal ?? ''}
+          isTaxEnabled={isTaxEnabled}
           onChange={(v) => onChange(player.id, 'auctionTotal', v)}
         />
         <NumberField
@@ -63,7 +99,7 @@ export default function PlayerCard({ index, player, result, lostItemMode, onChan
 
       <dl className="player-card__stats">
         <div>
-          <dt>實際拍賣收入 (扣 3%)</dt>
+          <dt>{isTaxEnabled ? '實際拍賣收入 (扣 3%)' : '實際拍賣收入'}</dt>
           <dd>{formatMesos(result.actualAuctionIncome)}</dd>
         </div>
         {isSelfAbsorbMode && result.effectiveLostItemValue > 0 && (

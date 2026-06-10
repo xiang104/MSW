@@ -16,10 +16,11 @@ export default function App() {
   const [playerCount, setPlayerCount] = useState(4);
   const [players, setPlayers] = useState(() => createPlayers(4));
   const [lostItemMode, setLostItemMode] = useState(LOST_ITEM_MODE.SHARED);
+  const [isTaxEnabled, setIsTaxEnabled] = useState(false);
 
   const settlement = useMemo(
-    () => calculateSettlement(players, { lostItemMode }),
-    [players, lostItemMode]
+    () => calculateSettlement(players, { lostItemMode, isTaxEnabled }),
+    [players, lostItemMode, isTaxEnabled]
   );
 
   const isSelfAbsorbMode = lostItemMode === LOST_ITEM_MODE.SELF_ABSORB;
@@ -52,7 +53,7 @@ export default function App() {
     setPlayers((prev) =>
       prev.map((player) => ({
         ...player,
-        auctionTotal: 0,
+        auctionTotal: '',
         scissorsCount: 0,
         mileageRate: DEFAULT_MILEAGE_RATE,
         lostItemValue: 0,
@@ -103,6 +104,24 @@ export default function App() {
             <span className="player-count-control__hint">{MIN_PLAYERS} ~ {MAX_PLAYERS} 人</span>
           </div>
 
+          <div className="tax-toggle-control">
+            <label className="tax-toggle-control__label" htmlFor="tax-enabled">
+              拍賣場手續費
+            </label>
+            <label className="tax-toggle">
+              <input
+                id="tax-enabled"
+                type="checkbox"
+                checked={isTaxEnabled}
+                onChange={(e) => setIsTaxEnabled(e.target.checked)}
+              />
+              <span>計算拍賣場 3% 手續費</span>
+            </label>
+            <span className="tax-toggle-control__hint">
+              {isTaxEnabled ? '結算時將總賣價 × 0.97（無條件捨去）' : '目前以原價結算，不扣手續費'}
+            </span>
+          </div>
+
           <div className="lost-item-mode-control">
             <label htmlFor="lost-item-mode">搞丟道具處理模式</label>
             <select
@@ -139,7 +158,7 @@ export default function App() {
       </header>
 
       <section className="info-banner">
-        <span>拍賣場手續費固定 3%</span>
+        <span>{isTaxEnabled ? '拍賣場手續費 3%（已啟用）' : '拍賣場手續費未啟用，以原價結算'}</span>
         <span>剪刀成本 = (1,000 萬 ÷ 里程匯率) × 7,900</span>
         <span>虛擬持有 = 拍賣收入 + 搞丟道具賠償</span>
         <span>最終目標 = 基本分紅 + 個人代墊成本</span>
@@ -155,6 +174,7 @@ export default function App() {
               player={player}
               result={result}
               lostItemMode={lostItemMode}
+              isTaxEnabled={isTaxEnabled}
               onChange={handlePlayerChange}
             />
           );
