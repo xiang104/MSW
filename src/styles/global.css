@@ -822,6 +822,109 @@ body {
   color: var(--accent-blue);
 }
 
+.recent-rooms {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+}
+
+.recent-rooms__label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.recent-rooms__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.recent-rooms__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.recent-rooms__item:hover {
+  border-color: var(--accent-blue);
+  transform: translateY(-1px);
+}
+
+.recent-rooms__item strong {
+  font-size: 14px;
+}
+
+.recent-rooms__item span {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.room-panel__create {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.room-panel__name {
+  font-size: 18px;
+  color: var(--accent-gold);
+}
+
+.screenshot-upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.screenshot-upload__input {
+  display: none;
+}
+
+.screenshot-upload__btn {
+  min-width: 120px;
+}
+
+.screenshot-upload__preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.screenshot-upload__preview img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.screenshot-upload__preview:hover {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
 @media (max-width: 768px) {
   .app-header {
     flex-direction: column;

@@ -3,6 +3,7 @@ import {
   calculateTotal,
   LOST_ITEM_MODE,
 } from '../utils/calculator';
+import ScreenshotUpload from './ScreenshotUpload';
 
 function NumberField({ label, hint, value, onChange, min = 0 }) {
   return (
@@ -50,7 +51,17 @@ function AuctionTotalField({ inputId, value, isTaxEnabled, onChange }) {
   );
 }
 
-export default function PlayerCard({ index, player, result, lostItemMode, isTaxEnabled, onChange }) {
+export default function PlayerCard({
+  index,
+  player,
+  result,
+  lostItemMode,
+  isTaxEnabled,
+  isScreenshotProcessing,
+  screenshotProgress,
+  onChange,
+  onScreenshotSelect,
+}) {
   const isSelfAbsorbMode = lostItemMode === LOST_ITEM_MODE.SELF_ABSORB;
 
   return (
@@ -73,6 +84,15 @@ export default function PlayerCard({ index, player, result, lostItemMode, isTaxE
           isTaxEnabled={isTaxEnabled}
           onChange={(v) => onChange(player.id, 'auctionTotal', v)}
         />
+
+        <ScreenshotUpload
+          playerId={player.id}
+          screenshotUrl={player.screenshotUrl}
+          isProcessing={isScreenshotProcessing}
+          progress={screenshotProgress}
+          onSelectFile={onScreenshotSelect}
+        />
+
         <NumberField
           label="白金剪刀數量"
           value={player.scissorsCount}

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { get, off, onValue, ref, set, update } from 'firebase/database';
 import { getDb, isFirebaseConfigured } from '../firebase';
+import { addRoomToHistory } from '../utils/roomHistory';
+import { cleanupExpiredRooms } from '../utils/roomCleanup';
 import {
   buildRoomPayload,
   generateRoomCode,
@@ -28,6 +30,7 @@ export function useRoomSync({
   roomState,
   onRoomCodeChange,
   onRemoteUpdate,
+  onHistoryChange,
   onError,
 }) {
   const isRemoteUpdate = useRef(false);
@@ -96,21 +99,32 @@ export function useRoomSync({
     return () => clearTimeout(pushTimer.current);
   }, [enabled, roomCode, roomState, onError]);
 
-  const createRoom = useCallback(async () => {
-    if (!isFirebaseConfigured()) {
-      throw new Error('請先設定 Firebase 環境變數（.env）後重新啟動應用程式。');
-    }
+  const createRoom = useCallback(
+    async (roomName = '') => {
+      if (!isFirebaseConfigured()) {
+        throw new Error('請先設定 Firebase 環境變數（.env）後重新啟動應用程式。');
+      }
 
-    const db = getDb();
-    const code = generateRoomCode();
-    const payload = buildRoomPayload(roomState);
+      await cleanupExpiredRooms();
 
-    await set(ref(db, `rooms/${code}`), payload);
-    lastPushed.current = JSON.stringify(payload);
-    saveRoomCode(code);
-    onRoomCodeChange(code);
-    return code;
-  }, [roomState, onRoomCodeChange]);
+      const db = getDb();
+      const code = generateRoomCode();
+      const payload = buildRoomPayload({
+        ...roomState,
+        roomName: roomName.trim(),
+        createdAt: Date.now(),
+      });
+
+      await set(ref(db, `rooms/${code}`), payload);
+      lastPushed.current = JSON.stringify(payload);
+      saveRoomCode(code);
+      addRoomToHistory(code, roomName.trim() || code);
+      onHistoryChange?.();
+      onRoomCodeChange(code);
+      return code;
+    },
+    [roomState, onRoomCodeChange, onHistoryChange]
+  );
 
   const joinRoom = useCallback(
     async (rawCode) => {
@@ -144,10 +158,12 @@ export function useRoomSync({
       });
 
       saveRoomCode(code);
+      addRoomToHistory(code, parsed.roomName || code);
+      onHistoryChange?.();
       onRoomCodeChange(code);
       return code;
     },
-    [onRemoteUpdate, onRoomCodeChange]
+    [onRemoteUpdate, onRoomCodeChange, onHistoryChange]
   );
 
   const leaveRoom = useCallback(() => {

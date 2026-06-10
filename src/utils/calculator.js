@@ -23,6 +23,7 @@ export function createDefaultPlayer(index) {
     scissorsCount: 0,
     mileageRate: DEFAULT_MILEAGE_RATE,
     lostItemValue: 0,
+    screenshotUrl: '',
   };
 }
 

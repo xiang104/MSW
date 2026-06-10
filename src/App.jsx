@@ -4,7 +4,9 @@ import TeamSummary from './components/TeamSummary';
 import SettlementList from './components/SettlementList';
 import ModeSwitcher from './components/ModeSwitcher';
 import RoomPanel from './components/RoomPanel';
+import RecentRooms from './components/RecentRooms';
 import { getSavedRoomCode, useRoomSync } from './hooks/useRoomSync';
+import { useScreenshotUpload } from './hooks/useScreenshotUpload';
 import {
   MIN_PLAYERS,
   MAX_PLAYERS,
@@ -18,7 +20,9 @@ import {
 export default function App() {
   const [currentMode, setCurrentMode] = useState('local');
   const [roomCode, setRoomCode] = useState(null);
+  const [roomName, setRoomName] = useState('');
   const [roomError, setRoomError] = useState('');
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [playerCount, setPlayerCount] = useState(4);
   const [players, setPlayers] = useState(() => createPlayers(4));
   const [lostItemMode, setLostItemMode] = useState(LOST_ITEM_MODE.SHARED);
@@ -40,8 +44,9 @@ export default function App() {
       players,
       isTaxEnabled,
       lostItemMode,
+      roomName,
     }),
-    [playerCount, players, isTaxEnabled, lostItemMode]
+    [playerCount, players, isTaxEnabled, lostItemMode, roomName]
   );
 
   const applyRemoteState = useCallback((remote) => {
@@ -49,14 +54,22 @@ export default function App() {
     setPlayers(remote.players);
     setIsTaxEnabled(remote.isTaxEnabled);
     setLostItemMode(remote.lostItemMode);
+    setRoomName(remote.roomName || '');
     setRoomError('');
   }, []);
 
   const handleRoomCodeChange = useCallback((nextRoomCode) => {
     setRoomCode(nextRoomCode);
+    if (!nextRoomCode) {
+      setRoomName('');
+    }
     if (nextRoomCode) {
       setRoomError('');
     }
+  }, []);
+
+  const handleHistoryChange = useCallback(() => {
+    setHistoryRefreshKey((value) => value + 1);
   }, []);
 
   const { createRoom, joinRoom, leaveRoom, isFirebaseConfigured } = useRoomSync({
@@ -65,7 +78,34 @@ export default function App() {
     roomState,
     onRoomCodeChange: handleRoomCodeChange,
     onRemoteUpdate: applyRemoteState,
+    onHistoryChange: handleHistoryChange,
     onError: setRoomError,
+  });
+
+  const handleScreenshotPlayerUpdate = useCallback((playerId, { sellPriceUpdater, screenshotUrl }) => {
+    setPlayers((prev) =>
+      prev.map((player) => {
+        if (player.id !== playerId) return player;
+
+        const nextPlayer = { ...player };
+        if (sellPriceUpdater) {
+          nextPlayer.auctionTotal = sellPriceUpdater(player.auctionTotal ?? '');
+        }
+        if (screenshotUrl) {
+          nextPlayer.screenshotUrl = screenshotUrl;
+        }
+        return nextPlayer;
+      })
+    );
+  }, []);
+
+  const {
+    activePlayerId,
+    progress: screenshotProgress,
+    processScreenshot,
+  } = useScreenshotUpload({
+    roomCode: isInRoom ? roomCode : null,
+    onPlayerUpdate: handleScreenshotPlayerUpdate,
   });
 
   useEffect(() => {
@@ -129,18 +169,28 @@ export default function App() {
         scissorsCount: 0,
         mileageRate: DEFAULT_MILEAGE_RATE,
         lostItemValue: 0,
+        screenshotUrl: '',
       }))
     );
   }
 
-  async function handleCreateRoom() {
+  async function handleCreateRoom(name) {
     setRoomError('');
-    await createRoom();
+    await createRoom(name);
   }
 
   async function handleJoinRoom(code) {
     setRoomError('');
     await joinRoom(code);
+  }
+
+  async function handleQuickJoinRoom(code) {
+    setRoomError('');
+    try {
+      await joinRoom(code);
+    } catch (error) {
+      window.alert(error.message || '加入房間失敗');
+    }
   }
 
   function handleLeaveRoom() {
@@ -153,8 +203,16 @@ export default function App() {
       <ModeSwitcher currentMode={currentMode} onChange={handleModeChange} />
 
       {isRoomMode && (
+        <RecentRooms
+          refreshKey={historyRefreshKey}
+          onJoinRoom={handleQuickJoinRoom}
+        />
+      )}
+
+      {isRoomMode && (
         <RoomPanel
           roomCode={roomCode}
+          roomName={roomName}
           roomError={roomError}
           isFirebaseConfigured={isFirebaseConfigured}
           onCreateRoom={handleCreateRoom}
@@ -169,7 +227,7 @@ export default function App() {
           <h1>楓星分寶計算機</h1>
           <p>
             {isInRoom
-              ? '多人房間模式 · 資料即時同步至雲端'
+              ? `多人房間模式 · ${roomName || roomCode} · 資料即時同步`
               : '拍賣場結算 · 白金剪刀代墊 · 多退少補自動計算'}
           </p>
         </div>
@@ -264,6 +322,7 @@ export default function App() {
       <section className="info-banner">
         <span>{isTaxEnabled ? '拍賣場手續費 3%（已啟用）' : '拍賣場手續費未啟用，以原價結算'}</span>
         {isInRoom && <span>房間 {roomCode} · 變更將即時同步</span>}
+        <span>截圖上傳支援 OCR 自動辨識金額</span>
         <span>剪刀成本 = (1,000 萬 ÷ 里程匯率) × 7,900</span>
         <span>虛擬持有 = 拍賣收入 + 搞丟道具賠償</span>
         <span>最終目標 = 基本分紅 + 個人代墊成本</span>
@@ -280,7 +339,10 @@ export default function App() {
               result={result}
               lostItemMode={lostItemMode}
               isTaxEnabled={isTaxEnabled}
+              isScreenshotProcessing={activePlayerId === player.id}
+              screenshotProgress={screenshotProgress}
               onChange={handlePlayerChange}
+              onScreenshotSelect={processScreenshot}
             />
           );
         })}

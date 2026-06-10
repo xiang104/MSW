@@ -18,8 +18,15 @@ export function normalizeRoomCode(input) {
   return null;
 }
 
-export function buildRoomPayload({ playerCount, players, isTaxEnabled, lostItemMode }) {
-  return {
+export function buildRoomPayload({
+  playerCount,
+  players,
+  isTaxEnabled,
+  lostItemMode,
+  roomName,
+  createdAt,
+}) {
+  const payload = {
     isTaxEnabled: Boolean(isTaxEnabled),
     lostItemMode,
     playerCount,
@@ -30,9 +37,20 @@ export function buildRoomPayload({ playerCount, players, isTaxEnabled, lostItemM
       scissorsCount: parseNumber(player.scissorsCount),
       mileageRate: Math.max(parseNumber(player.mileageRate), 1) || DEFAULT_MILEAGE_RATE,
       lostItemValue: parseNumber(player.lostItemValue),
+      screenshotUrl: player.screenshotUrl ?? '',
     })),
     updatedAt: Date.now(),
   };
+
+  if (roomName !== undefined) {
+    payload.roomName = String(roomName || '').trim();
+  }
+
+  if (createdAt !== undefined) {
+    payload.createdAt = createdAt;
+  }
+
+  return payload;
 }
 
 export function parseRoomData(data) {
@@ -55,6 +73,7 @@ export function parseRoomData(data) {
       scissorsCount: remote.scissorsCount ?? 0,
       mileageRate: remote.mileageRate ?? DEFAULT_MILEAGE_RATE,
       lostItemValue: remote.lostItemValue ?? 0,
+      screenshotUrl: remote.screenshotUrl ?? '',
     };
   });
 
@@ -66,5 +85,7 @@ export function parseRoomData(data) {
       data.lostItemMode === LOST_ITEM_MODE.SELF_ABSORB
         ? LOST_ITEM_MODE.SELF_ABSORB
         : LOST_ITEM_MODE.SHARED,
+    roomName: data.roomName ?? '',
+    createdAt: data.createdAt ?? null,
   };
 }
